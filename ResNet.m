@@ -24,6 +24,7 @@ classifier = fitcecoc(train_features,train_labels);
 %Predict
 YPred = predict(classifier,test_features);
 accuracy = mean(YPred == test_labels);
+saveLearnerForCoder(classifier,'ResNet_SVM');
 display(accuracy)
 
 
