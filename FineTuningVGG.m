@@ -2,9 +2,6 @@
 train_table=readtable('training_list.csv'); %Read train table
 test_table=readtable("validation_list.csv"); %Read val table
 
-
-
-
 train_files=train_table{:,'Var1'}; %Take only the image files
 train_labels=train_table{:,'Var6'}; %Classification Labels
 train_img=imageDatastore("images\"); %Store dataset on ImageDataStore
@@ -16,25 +13,22 @@ test_img=imageDatastore("images\");
 test_img.Files=test_files;
 test_img.Labels=categorical(test_labels);
 %Load network
-net = resnet18;
+net = vgg16;
 %analyzeNetwork(net);
 inputSize = net.Layers(1).InputSize; %Take input size 
 %train_img=augmentedImageDatastore(inputSize,train_img); %Resize dataset
-test_img=augmentedImageDatastore(inputSize,test_img); %Resize dataset
+test_img=augmentedImageDatastore([128 128 3],test_img); %Resize dataset
 inputSize = net.Layers(1).InputSize;
-%layers = net.Layers(1:end-3);
 
-lgraph = layerGraph(net);
-% 2. Replace the last few layers
-lgraph = replaceLayer(lgraph,'fc1000',...
-  fullyConnectedLayer(16,'Name','fcNew'));
-lgraph = replaceLayer(lgraph,'ClassificationLayer_predictions',...
-  classificationLayer('Name','ClassificationNew'));
-% 4. Re-connect all the layers in the original order 
-%    by using the support function createLgraphUsingConnections
-layers = lgraph.Layers;
-connections = lgraph.Connections;
-lgraph = createLgraphUsingConnections(layers,connections);
+layers = [];
+for i=1:length(net.Layers)
+     if i==1
+        layers(1)=imageInputLayer([128 128 3]);
+     end
+     layers(i)=net.Layers(i);
+end
+layers = layers(1:end-3);
+
 %Freeze Layers
 for i = 1:numel(layers)
         if isprop(layers(i),'WeightLearnRateFactor')
@@ -52,14 +46,13 @@ for i = 1:numel(layers)
 end
 %%%%
 numClasses=16;
-%{
 layers = [
     layers
     fullyConnectedLayer(numClasses,'WeightLearnRateFactor',20,'BiasLearnRateFactor',20)
     softmaxLayer
     classificationLayer];
-%}
 
+inputSize=[128,128,3];
 pixelRange = [-30 30];
 imageAugmenter = imageDataAugmenter( ...
     'RandXReflection',true, ...
@@ -69,45 +62,20 @@ augimdsTrain = augmentedImageDatastore(inputSize(1:2),train_img, ...
     'DataAugmentation',imageAugmenter);
 
 options = trainingOptions('sgdm', ...
+    'MiniBatchSize',64, ...
     'MaxEpochs',10, ...
     'InitialLearnRate',1e-4, ...
     'Shuffle','every-epoch', ...
     'ValidationData',test_img, ...
     'ValidationFrequency',3, ...
+    'ExecutionEnvironment','gpu', ...
     'Verbose',false, ...
     'Plots','training-progress');
-netTransfer = trainNetwork(augimdsTrain,lgraph,options);
-save('netTransfer');
-
-load('netTransferResNetTuned.mat','netTransfer','augimdsTrain','lgraph','test_img');
-options = trainingOptions('sgdm', ...
-    'MaxEpochs',5, ...
-    'InitialLearnRate',1e-4, ...
-    'Shuffle','every-epoch', ...
-    'ValidationData',test_img, ...
-    'ValidationFrequency',3, ...
-    'Verbose',false, ...
-    'Plots','training-progress');
-netTransferUpdated = trainNetwork(augimdsTrain,layerGraph(netTransfer),options);
-save('netTransferUpdated');
+netTransferVGGTuned = trainNetwork(augimdsTrain,layers,options);
+save('netTransferVGGTuned');
 
 
 
-
-
-
-function lgraph = createLgraphUsingConnections(layers,connections)
-
-lgraph = layerGraph();
-for i = 1:numel(layers)
-    lgraph = addLayers(lgraph,layers(i));
-end
-
-for c = 1:size(connections,1)
-    lgraph = connectLayers(lgraph,connections.Source{c},connections.Destination{c});
-end
-
-end
 
 
 
