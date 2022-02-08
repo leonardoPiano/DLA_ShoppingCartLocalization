@@ -1,5 +1,5 @@
 %load dataset
-[train_img,test_img]=loadDataset();
+[train_img,test_img,train_labels,test_labels]=loadDataset();
 %Load AlexNet network
 net = alexnet;
 inputSize = net.Layers(1).InputSize; %Take input size 
@@ -13,6 +13,7 @@ test_features=activations(net,test_img,layer,'OutputAs','rows');
 classifier = fitcecoc(train_features,train_labels);
 %Predict
 YPred = predict(classifier,test_features);
+save ("AlexNetPredSvm.mat", "YPred" )
 accuracy = mean(YPred == test_labels);
 saveLearnerForCoder(classifier,'AlexNet_SVM');
 display(accuracy)

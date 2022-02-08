@@ -1,5 +1,5 @@
 %Load data
-[train_img,test_img]=loadDataset();
+[train_img,test_img,train_labels,test_labels]=loadDataset();
 inputSize=[128,128,3];
 pixelRange = [-30 30];
 imageAugmenter = imageDataAugmenter( ...

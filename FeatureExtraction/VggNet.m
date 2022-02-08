@@ -1,5 +1,5 @@
 %load dataset
-[train_img,test_img]=loadDataset();
+[train_img,test_img,train_labels,test_labels]=loadDataset();
 %Load Vgg16 network
 net = vgg16;
 
@@ -14,6 +14,7 @@ test_features=activations(net,test_img,layer,'OutputAs','rows');
 classifier = fitcecoc(train_features,train_labels);
 %Predict
 YPred = predict(classifier,test_features);
+save ("VggNetPredSvm.mat", "YPred" )
 accuracy = mean(YPred == test_labels);
 saveLearnerForCoder(classifier,'VggNet_SVM');
 display(accuracy)
